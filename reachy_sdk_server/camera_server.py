@@ -15,8 +15,11 @@ from rclpy.node import Node
 from sensor_msgs.msg._compressed_image import CompressedImage
 from reachy_msgs.srv import GetCameraZoomLevel, GetCameraZoomSpeed
 from reachy_msgs.srv import SetCameraZoomLevel, SetCameraZoomSpeed
+from reachy_msgs.srv import SendRestartRequest
 
 from reachy_sdk_api import camera_reachy_pb2, camera_reachy_pb2_grpc
+
+from google.protobuf.empty_pb2 import Empty
 
 
 class CameraServer(
@@ -42,6 +45,7 @@ class CameraServer(
         self.get_zoom_speed_client = self.create_client(GetCameraZoomSpeed, 'get_camera_zoom_speed')
         self.set_zoom_level_client = self.create_client(SetCameraZoomLevel, 'set_camera_zoom_level')
         self.set_zoom_speed_client = self.create_client(SetCameraZoomSpeed, 'set_camera_zoom_speed')
+        self.restart_client = self.create_client(SendRestartRequest, 'send_restart_request')
 
         self.left_camera_sub = self.create_subscription(
             CompressedImage,
@@ -149,6 +153,13 @@ class CameraServer(
 
         return camera_reachy_pb2.ZoomCommandAck(success=False)
 
+    def SendRestartRequest(self, request: Empty, context) -> camera_reachy_pb2.RestartCommandAck:
+        """Handle Restart command."""
+        req = SendRestartRequest.Request()
+        result = self._wait_for(self.restart_client.call_async(req))
+        success = True if result is not None else False
+
+        return camera_reachy_pb2.RestartCommandAck(success=success)
 
 def main():
     """Run the Node and the gRPC server."""
