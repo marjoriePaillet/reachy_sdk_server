@@ -15,6 +15,7 @@ from rclpy.node import Node
 from sensor_msgs.msg._compressed_image import CompressedImage
 from reachy_msgs.srv import GetCameraZoomLevel, GetCameraZoomSpeed
 from reachy_msgs.srv import SetCameraZoomLevel, SetCameraZoomSpeed
+from reachy_msgs.srv import Set2CamerasZoomLevel
 
 from reachy_sdk_api import camera_reachy_pb2, camera_reachy_pb2_grpc
 
@@ -42,6 +43,7 @@ class CameraServer(
         self.get_zoom_speed_client = self.create_client(GetCameraZoomSpeed, 'get_camera_zoom_speed')
         self.set_zoom_level_client = self.create_client(SetCameraZoomLevel, 'set_camera_zoom_level')
         self.set_zoom_speed_client = self.create_client(SetCameraZoomSpeed, 'set_camera_zoom_speed')
+        self.set_2_cameras_zoom_client = self.create_client(Set2CamerasZoomLevel, 'set_2_cameras_zoom_level')
 
         self.left_camera_sub = self.create_subscription(
             CompressedImage,
@@ -124,19 +126,33 @@ class CameraServer(
         name = 'left_eye' if request.camera.id == camera_reachy_pb2.CameraId.LEFT else 'right_eye'
 
         if request.HasField('homing_command'):
-            req = SetCameraZoomLevel.Request()
-            req.name = name
-            req.zoom_level = 'homing'
-            result = self._wait_for(self.set_zoom_level_client.call_async(req))
+
+            req = Set2CamerasZoomLevel.Request()
+            req.left_zoom = 'homing'
+            req.right_zoom = 'homing'
+            result = self._wait_for(self.set_2_cameras_zoom_client.call_async(req))
             success = True if result is not None else False
+
+            # req = SetCameraZoomLevel.Request()
+            # req.name = name
+            # req.zoom_level = 'homing'
+            # result = self._wait_for(self.set_zoom_level_client.call_async(req))
+            # success = True if result is not None else False
             return camera_reachy_pb2.ZoomCommandAck(success=success)
 
         elif request.HasField('level_command'):
-            req = SetCameraZoomLevel.Request()
-            req.name = name
-            req.zoom_level = camera_reachy_pb2.ZoomLevelPossibilities.Name(request.level_command.level).lower()
-            result = self._wait_for(self.set_zoom_level_client.call_async(req))
+
+            req = Set2CamerasZoomLevel.Request()
+            req.left_zoom = camera_reachy_pb2.ZoomLevelPossibilities.Name(request.level_command.level).lower()
+            req.right_zoom = camera_reachy_pb2.ZoomLevelPossibilities.Name(request.level_command.level).lower()
+            result = self._wait_for(self.set_2_cameras_zoom_client.call_async(req))
             success = True if result is not None else False
+
+            # req = SetCameraZoomLevel.Request()
+            # req.name = name
+            # req.zoom_level = camera_reachy_pb2.ZoomLevelPossibilities.Name(request.level_command.level).lower()
+            # result = self._wait_for(self.set_zoom_level_client.call_async(req))
+            # success = True if result is not None else False
             return camera_reachy_pb2.ZoomCommandAck(success=success)
 
         elif request.HasField('speed_command'):
